@@ -1,6 +1,8 @@
 **📌 Project Overview**
-The **Enterprise SOC Lab** is a controlled and isolated cybersecurity environment designed to simulate the major functions of a modern Security Operations Center.
-The project connects the complete security operations lifecycle:
+The Enterprise SOC Lab is a controlled and isolated environment designed to reproduce the major technical workflows of a modern Security Operations Center.
+
+The project follows the complete security operations lifecycle:
+
 Adversarial Activity
         ↓
 Security Telemetry
@@ -20,7 +22,9 @@ Threat Hunting / Incident Response / Threat Intelligence
 SOAR & Automation
         ↓
 Purple Team Validation
-The objective is not simply to build Splunk dashboards. The objective is to understand how attacker behavior becomes observable security evidence and how a SOC can detect, investigate, validate, enrich, and respond to that activity.
+        ↓
+Research & Measurement
+The goal is not simply to create Splunk dashboards. The goal is to understand how attacker behavior becomes observable security evidence and how a SOC can detect, investigate, validate, enrich, automate, and improve its response.
 
 **🎯 Project Objectives**
 - Build an isolated enterprise-style Windows security environment.
@@ -37,31 +41,26 @@ The objective is not simply to build Splunk dashboards. The objective is to unde
 - Establish measurable experiments that can support cybersecurity research.
   
 **🏗️ Lab Architecture**
-                         ┌──────────────────────────────┐
-                         │       WINDOWS HOST           │
-                         │                              │
-                         │     Splunk Enterprise        │
-                         │       192.168.56.1           │
-                         └──────────────┬───────────────┘
-                                        │
-                              Host-Only Network
-                              192.168.56.0/24
-                                        │
-              ┌─────────────────────────┼─────────────────────────┐
-              │                         │                         │
-              ▼                         ▼                         ▼
-     ┌────────────────┐       ┌────────────────┐       ┌────────────────┐
-     │      DC01      │       │   Windows 11   │       │     Kali       │
-     │ Windows Server │       │    Endpoint    │       │    Attacker    │
-     │     2022       │       │                │       │                │
-     │ 192.168.56.101 │       │ 192.168.56.102 │       │ 192.168.56.103 │
-     │                │       │                │       │                │
-     │ AD DS          │       │ Sysmon         │       │ Controlled     │
-     │ DNS            │       │ Splunk UF      │       │ Attack /       │
-     │ Authentication │       │ Firewall Logs  │       │ Validation     │
-     └────────────────┘       └────────────────┘       └────────────────┘
-     
-**Lab Components**
+```mermaid
+flowchart TB
+    H["Windows Host<br/>192.168.56.1<br/><br/>Splunk Enterprise"]
+
+    NET["Host-Only Network<br/>192.168.56.0/24"]
+
+    DC["DC01<br/>Windows Server 2022<br/>192.168.56.101<br/><br/>AD DS • DNS • Authentication"]
+    WIN["Windows 11 Endpoint<br/>192.168.56.102<br/><br/>Sysmon • Splunk UF • Firewall Logs"]
+    KALI["Kali Linux<br/>192.168.56.103<br/><br/>Controlled Attack / Validation"]
+
+    H --- NET
+    NET --- DC
+    NET --- WIN
+    NET --- KALI
+
+    WIN -->|"Telemetry"| H
+    DC -->|"Security Events"| H
+    KALI -->|"Controlled Activity"| WIN
+```
+Lab Components
 Component	Hostname	IP Address	Role
 Windows Host	Host	192.168.56.1	Splunk Enterprise
 Windows Server 2022	DC01	192.168.56.101	AD DS / DNS / Authentication
@@ -72,38 +71,37 @@ Kali Linux	Kali	192.168.56.103	Controlled attacker / test source
 Domain: soclab.local
 
 **🔄 Telemetry Pipeline**
-                  Controlled Attack Activity
-                            │
-                            ▼
-                  Windows Environment
-                            │
-             ┌──────────────┼──────────────┐
-             │              │              │
-             ▼              ▼              ▼
-        Windows Events     Sysmon      Firewall Logs
-             │              │              │
-             └──────────────┼──────────────┘
-                            ▼
-                 Splunk Universal Forwarder
-                            │
-                            ▼
-                    Splunk Enterprise
-                            │
-                            ▼
-                   SPL Detection Rules
-                            │
-                            ▼
-                         Alerts
-                            │
-             ┌──────────────┼──────────────┐
-             ▼              ▼              ▼
-       Investigation     Dashboards     ATT&CK Mapping
-       
+```mermaid
+flowchart LR
+    A["Controlled Attack Activity"]
+    B["Windows Environment"]
+    C["Windows Security Events"]
+    D["Sysmon"]
+    E["Windows Firewall"]
+    F["Splunk Universal Forwarder"]
+    G["Splunk Enterprise"]
+    H["SPL Detection Rules"]
+    I["Security Alerts"]
+    J["Investigation"]
+    K["Dashboards"]
+    L["MITRE ATT&CK Mapping"]
+
+    A --> B
+    B --> C
+    B --> D
+    B --> E
+    C --> F
+    D --> F
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    G --> K
+    H --> L
+```
 **🛡️ Telemetry Sources**
-
-**Windows Security Events**
-
-Key events used in the lab include:
+Windows Security Events
 Event ID	Purpose
 4624	Successful logon
 4698	Scheduled task creation
@@ -114,7 +112,7 @@ Event ID	Purpose
 
 
 **Sysmon**
-Sysmon provides enhanced endpoint visibility.
+The lab uses Sysmon for enhanced endpoint visibility.
 Important telemetry includes:
 - Process creation — Event ID 1
 - Network connection — Event ID 3
@@ -124,6 +122,7 @@ Important telemetry includes:
 - User context
   
 **Windows Firewall**
+
 Firewall logging provides:
 - Source IP
 - Destination IP
@@ -134,8 +133,9 @@ Firewall logging provides:
 - Dropped connections
   
 **🔎 Detection Engineering**
-The project currently contains 15 detection IDs, with DET-002 retained as a disabled legacy/duplicate detection.
-ID	Detection	               Primary Evidence	ATT&CK / Classification
+
+The project currently contains 15 detection IDs. DET-002 is retained as a disabled legacy/duplicate detection and is superseded by DET-010.
+ID	Detection	Primary Evidence	ATT&CK / Classification
 DET-001	Possible Password Guessing	Kerberos 4771	T1110.001 — Password Guessing
 DET-002	Possible Password Spraying	Kerberos 4771	Legacy / superseded by DET-010
 DET-003	Suspicious PowerShell Indicators	Windows / Sysmon	T1059.001 — PowerShell
@@ -153,28 +153,24 @@ DET-014	Suspicious Remote Administrative Logon	Windows 4624	Operational network-
 DET-015	Suspicious Outbound Connection	Sysmon 3	Operational suspicious-connection monitoring
 
 
-ATT&CK mappings are applied only where the available telemetry supports the technique. Some detections are intentionally treated as operational monitoring rather than being forced into an unsupported ATT&CK technique.
+ATT&CK mapping principle: techniques are assigned only when the available telemetry supports the mapping. Detections without sufficient evidence are intentionally treated as operational monitoring rather than being forced into an unsupported ATT&CK technique.
 
 **🧪 Detection Validation**
-
 A major focus of the project is validation rather than simply writing SPL.
-The validation workflow is:
-1. Generate controlled activity
-          ↓
-2. Confirm Windows / Sysmon telemetry
-          ↓
-3. Confirm ingestion into Splunk
-          ↓
-4. Execute detection SPL
-          ↓
-5. Validate expected detection result
-          ↓
-6. Verify severity and ATT&CK mapping
-          ↓
-7. Tune thresholds / false positives
-          ↓
-8. Document the result
-Validated areas include:
+```mermaid
+flowchart LR
+    A["Generate Controlled Activity"]
+    B["Confirm Windows / Sysmon Telemetry"]
+    C["Confirm Splunk Ingestion"]
+    D["Execute Detection SPL"]
+    E["Validate Detection Result"]
+    F["Verify Severity / ATT&CK"]
+    G["Tune Thresholds / False Positives"]
+    H["Document Result"]
+
+    A --> B --> C --> D --> E --> F --> G --> H
+```
+**Validated areas include:**
 - Encoded PowerShell
 - PowerShell network activity
 - PowerShell tool transfer
@@ -186,11 +182,10 @@ Validated areas include:
 - Network reconnaissance / connection activity
   
 **📊 SOC Dashboard Ecosystem**
-The project contains multiple custom Dashboard Studio views representing different SOC functions.
-
+The project contains multiple custom Splunk Dashboard Studio views representing different SOC functions.
 **1. Executive SOC Dashboard**
 **Purpose**: management-level security visibility.
-Designed to provide a high-level view of:
+Focuses on:
 - Security posture
 - Detection activity
 - Security trends
@@ -199,8 +194,7 @@ Designed to provide a high-level view of:
   
 **2. SOC Overview — Enterprise Security Operations Center**
 **Purpose**: analyst-facing operational visibility.
-
-Includes areas such as:
+Includes:
 - Security event volume
 - High-severity detection activity
 - Affected hosts
@@ -212,10 +206,9 @@ Includes areas such as:
 - Network reconnaissance
 - Source IP activity
 - Recent security detections
-  
+- 
 **3. Detection Engineering Dashboard**
-**Purpose**: detection lifecycle and engineering visibility
-
+**Purpose**: detection lifecycle and engineering visibility.
 Focuses on:
 - Detection activity
 - Detection behavior
@@ -224,34 +217,28 @@ Focuses on:
 - Detection-oriented operational analysis
   
 **4. Incident Response & Threat Hunting**
-
 **Purpose**: support analyst investigation and hunting workflows.
-
-Provides a dedicated operational view for:
+Provides visibility into:
 - Threat-hunting activity
 - Suspicious behavior investigation
 - Incident-oriented analysis
 - Investigation context
 - Security-event review
-The dashboard/workflow has been built; the project will continue expanding the underlying hunting hypotheses, case procedures, evidence handling, and repeatable response workflows.
+The dashboard/workflow foundation is built. Structured hunting hypotheses, case procedures, evidence handling, and repeatable response workflows will continue to mature.
 
 **5. Threat Intelligence & IOC Dashboard**
-
 **Purpose**: threat intelligence and indicator investigation.
-
 Designed around:
 - IOC-oriented analysis
 - Indicator investigation
 - Threat intelligence context
 - Security-event enrichment
 - Analyst investigation workflows
-The dashboard layer is built; deeper external intelligence integrations and automated enrichment remain part of the next maturity stage.
+The dashboard layer is built. Deeper external intelligence integrations and automated enrichment remain part of the next maturity stage.
 
 **6. SOAR & Incident Automation**
-
-**Purpose: visualize post-detection automation and response workflows.**
-
-**Includes concepts such as:**
+**Purpose**: visualize post-detection automation and response workflows.
+Includes concepts such as:
 - Playbook execution
 - Automation queue
 - Analyst approval
@@ -260,10 +247,8 @@ The dashboard layer is built; deeper external intelligence integrations and auto
 - MTTR
 - Automated resolution
 - Response activity
-  
-**Advanced SOAR — Remaining**
-
-The next maturity stage is to move toward integrated workflows such as:
+Advanced SOAR — Remaining
+The next maturity stage is to move toward:
 Detection
    ↓
 IOC Extraction
@@ -283,97 +268,65 @@ Case Update
 Resolution
 
 **7. MITRE ATT&CK Detection Coverage**
-
-**Purpose:** visualize detection coverage against MITRE ATT&CK techniques.
-
-**Focuses on**:
+**Purpose**: visualize detection coverage against MITRE ATT&CK techniques.
+Focuses on:
 - ATT&CK techniques
 - Tactic-level visibility
 - Detection coverage
 - Technique-to-detection relationships
 - Coverage gaps
-  
+
 **8. Purple Team & MITRE ATT&CK Validation Dashboard**
-
 **Purpose**: validate whether detections actually work against controlled adversarial behavior.
-
-**Includes**:
+Includes:
 - Techniques tested
 - Detection validation matrix
 - Atomic test activity
 - ATT&CK tactic/technique views
 - Detection outcomes
 - Purple Team validation
-  
-The key distinction is:
-MITRE Coverage
-      =
-"What can we detect?"
-
-Purple Team Validation
-      =
-"Have we actually tested that detection?"
+MITRE Coverage asks: “What can we detect?”
+Purple Team Validation asks: “Have we actually tested that detection?”
 
 **🟣 Purple Team Methodology**
+```mermaid
+flowchart LR
+    A["Adversary Simulation"]
+    B["Observable Telemetry"]
+    C["Detection"]
+    D["Validation"]
+    E["ATT&CK Mapping"]
+    F["Detection Tuning"]
 
-The project follows a continuous Purple Team feedback loop:
-
-Adversary Simulation
-        │
-        ▼
-Observable Telemetry
-        │
-        ▼
-Detection
-        │
-        ▼
-Validation
-        │
-        ▼
-ATT&CK Mapping
-        │
-        ▼
-Detection Tuning
-        │
-        └──────────────► Repeat
-        
-The goal is to identify detection gaps, validate existing detections, tune false positives, and improve detection coverage.
-
+    A --> B --> C --> D --> E --> F
+    F -.-> A
+```
+The objective is to identify detection gaps, validate existing detections, tune false positives, and improve detection coverage.
 **🧭 SOC Capability Model**
+```mermaid
+flowchart TB
+    R["Research"]
+    P["Purple Team / ATT&CK Validation"]
+    TH["Threat Hunting"]
+    IR["Incident Response"]
+    TI["Threat Intelligence"]
+    SOAR["SOAR / Automation"]
+    DE["Detection Engineering"]
+    SIEM["Splunk SIEM"]
+    TEL["Telemetry Collection"]
+    LAB["Enterprise Lab"]
 
-The project is organized around the following operational capability layers:
-                    ┌─────────────────────┐
-                    │      RESEARCH       │
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │  PURPLE TEAM /      │
-                    │  ATT&CK VALIDATION  │
-                    └──────────┬──────────┘
-                               │
-        ┌──────────────────────┼──────────────────────┐
-        │                      │                      │
-        ▼                      ▼                      ▼
- THREAT HUNTING         INCIDENT RESPONSE       THREAT INTEL
-        │                      │                      │
-        └──────────────────────┼──────────────────────┘
-                               ▼
-                     SOAR / AUTOMATION
-                               │
-                               ▼
-                    DETECTION ENGINEERING
-                               │
-                               ▼
-                         SPLUNK SIEM
-                               │
-                               ▼
-                    TELEMETRY COLLECTION
-                               │
-                               ▼
-                     ENTERPRISE LAB
-                     
+    LAB --> TEL --> SIEM --> DE --> SOAR
+    SOAR --> TH
+    SOAR --> IR
+    SOAR --> TI
+    TH --> P
+    IR --> P
+    TI --> P
+    P --> R
+```
 **📈 Current Project Status**
-Capability	Status
+**Capability	Status**
 Enterprise Lab Infrastructure	✅ Complete
 Windows Server / DC01	✅ Complete
 Active Directory / DNS	✅ Complete
@@ -403,15 +356,7 @@ Documentation	🟡 In Progress
 Research Paper	⏳ Planned
 
 
-**Status terminology**
-- Complete: foundational implementation is finished.
-- Built: the capability/dashboard has been implemented.
-- Built / Continuing: the interface and initial workflow exist, while operational depth is still being expanded.
-- Substantially Complete: the core capability is implemented and validated, with additional maturity work remaining.
-- Current: actively being audited or improved.
-- Remaining: planned next-stage engineering.
-- Planned: future research/development work.
-🗺️ Project Roadmap
+**🗺️ Project Roadmap**
 Phase 1 — Enterprise Lab Foundation
 - [x] Enterprise lab infrastructure
 - [x] Active Directory
@@ -487,7 +432,7 @@ Phase 7 — Research
 - [ ] Final paper / publication preparation
 Status: PLANNED
 **🔬 Research Direction**
-A potential research direction based on the lab is:
+Potential research topic:
 A Repeatable Framework for Validating SIEM Detection Rules Using Adversary Simulation and MITRE ATT&CK Mapping
 
 **Research Question**
@@ -499,8 +444,7 @@ Can a small enterprise SOC lab provide repeatable detection validation by combin
 - Controlled adversary simulation
 - Detection engineering
 - Purple Team validation
-  
-**Experimental Model**
+Experimental Model
 Attack
   ↓
 Telemetry
@@ -512,7 +456,8 @@ Alert
 Validation
   ↓
 Measurement
-Potential Measurements
+
+**Potential Measurements**
 - Detection success rate
 - Time to detection
 - Event volume
@@ -521,17 +466,16 @@ Potential Measurements
 - Repeatability
 - Analyst effort
 - Detection coverage
-  
-The research will be based on controlled experiments and measurable results rather than dashboard screenshots alone.
-📚 Learning Objectives
-The project is also being used as a practical learning environment for:
-SIEM
+The research should be based on controlled experiments and measurable results rather than dashboard screenshots alone.
+
+**📚 Learning Objectives**
+**SIEM**
 - SIEM architecture
 - Log ingestion
 - Event analysis
 - Detection correlation
 - Alerting
-Splunk / SPL
+**Splunk / SPL**
 - Search
 - Fields
 - stats
@@ -543,7 +487,7 @@ Splunk / SPL
 - Time windows
 - Alert creation
 - Dashboard development
-SOC Operations
+**SOC Operations**
 - Alert triage
 - Detection validation
 - False-positive analysis
@@ -552,7 +496,7 @@ SOC Operations
 - Incident response
 - Threat intelligence
 - Security automation
-MITRE ATT&CK
+**MITRE ATT&CK**
 - Technique identification
 - Detection mapping
 - Purple Team validation
@@ -561,30 +505,23 @@ MITRE ATT&CK
   
 **📁 Repository Structure**
 Enterprise-SOC-Lab/
-│
 ├── README.md
-│
 ├── architecture/
 │   ├── network-diagram.png
 │   ├── soc-architecture.png
 │   └── architecture.md
-│
 ├── detections/
 │   ├── DET-001-password-guessing.md
 │   ├── DET-002-password-spraying-legacy.md
 │   ├── DET-003-suspicious-powershell.md
-│   ├── ...
-│   └── DET-015-suspicious-outbound-connection.md
-│
+│   └── ...
 ├── splunk/
 │   ├── detections/
 │   ├── alerts/
 │   ├── dashboards/
 │   └── queries/
-│
 ├── mitre/
 │   └── attack-mapping.md
-│
 ├── attacks/
 │   ├── password-guessing.md
 │   ├── password-spraying.md
@@ -592,62 +529,21 @@ Enterprise-SOC-Lab/
 │   ├── scheduled-task.md
 │   ├── service-creation.md
 │   └── network-recon.md
-│
 ├── threat-hunting/
-│   ├── README.md
-│   └── hunts/
-│
 ├── incident-response/
-│   ├── README.md
-│   ├── playbooks/
-│   └── cases/
-│
 ├── threat-intelligence/
-│   ├── README.md
-│   ├── ioc-analysis/
-│   └── enrichment/
-│
 ├── soar/
-│   ├── README.md
-│   ├── playbooks/
-│   └── automation/
-│
 ├── purple-team/
-│   ├── detection-validation.md
-│   └── attack-scenarios/
-│
 ├── dashboards/
-│   ├── executive-soc.png
-│   ├── soc-overview.png
-│   ├── detection-engineering.png
-│   ├── incident-response-threat-hunting.png
-│   ├── threat-intelligence-ioc.png
-│   ├── soar-incident-automation.png
-│   ├── mitre-coverage.png
-│   └── purple-team-validation.png
-│
 ├── screenshots/
-│   ├── detections/
-│   ├── alerts/
-│   ├── investigations/
-│   └── dashboards/
-│
 ├── documentation/
-│   ├── project-report.pdf
-│   └── management-presentation.pdf
-│
 ├── research/
-│   ├── research-question.md
-│   ├── literature-review.md
-│   └── experiments/
-│
 ├── .gitignore
 └── LICENSE
 
 **🔐 Security & Ethics**
 This project is intended for authorized laboratory use only.
 All adversarial activity is performed inside a controlled environment configured for security testing.
-Do not use attack simulations, exploitation techniques, credentials, or security-testing procedures against systems without explicit authorization.
 The repository must never contain:
 - Passwords
 - API keys
@@ -665,6 +561,7 @@ Configuration examples should be sanitized before publication.
 **🤖 Development & AI Assistance**
 AI assistance was used during parts of the project development process.
 The project work includes designing the lab architecture, configuring telemetry, generating controlled adversarial activity, developing and validating detection logic, mapping applicable detections to MITRE ATT&CK, and building SOC dashboards.
+
 AI-generated guidance is treated as a development aid rather than a substitute for validation. Detection logic and configurations are tested against the lab environment before being treated as part of the project.
 The long-term objective is to independently understand and reproduce the major engineering decisions, SPL queries, detection assumptions, investigation workflows, and security concepts represented in this repository.
 
